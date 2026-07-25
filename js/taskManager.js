@@ -55,6 +55,13 @@ const TaskManager = {
     if (changes.description != null) changes.description = String(changes.description).trim();
     if (changes.category != null) changes.category = String(changes.category).trim();
 
+    // If due date changed and was previously marked overdue, clear stale status
+    if (changes.dueDate !== undefined && this._tasks[index].status === 'overdue') {
+      if (!Utils.isOverdue(changes.dueDate)) {
+        changes.status = 'todo';
+      }
+    }
+
     this._tasks[index] = { ...this._tasks[index], ...changes };
     await Storage.updateTask(id, this._tasks[index]);
     return this._tasks[index];
@@ -116,6 +123,7 @@ const TaskManager = {
     const task = this._tasks[index];
     task.completed = !task.completed;
     task.completedAt = task.completed ? new Date().toISOString() : null;
+    task.status = task.completed ? 'done' : (Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo');
 
     await Storage.updateTask(id, task);
     return task;
@@ -236,6 +244,7 @@ const TaskManager = {
       if (task && !task.completed) {
         task.completed = true;
         task.completedAt = new Date().toISOString();
+        task.status = 'done';
         await Storage.updateTask(id, task);
       }
     }
@@ -391,18 +400,24 @@ const TaskManager = {
     };
   },
 
-  // Resolve a task's kanban column. Existing tasks without an explicit
-  // status keep the previous date/subtask-derived behavior.
+  // Resolve a task's kanban column.
   getKanbanStatus(task) {
     if (!task) return 'todo';
     if (task.completed) return 'done';
 
-    const allowedStatuses = ['todo', 'in-progress', 'overdue'];
-    if (allowedStatuses.includes(task.status)) {
-      return task.status;
+    // Overdue takes precedence if due date has passed
+    if (Utils.isOverdue(task.dueDate)) {
+      return 'overdue';
     }
 
-    if (Utils.isOverdue(task.dueDate)) return 'overdue';
+    // If explicit status is set (and not stale overdue), use it
+    if (task.status && task.status !== 'overdue') {
+      const allowedStatuses = ['todo', 'in-progress'];
+      if (allowedStatuses.includes(task.status)) {
+        return task.status;
+      }
+    }
+
     if (task.subtasks?.length > 0 && task.subtasks.some(st => st.completed) && !task.subtasks.every(st => st.completed)) {
       return 'in-progress';
     }

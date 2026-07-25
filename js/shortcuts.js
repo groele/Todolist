@@ -89,8 +89,14 @@ const Shortcuts = {
     // Escape: Close modals, clear selection
     if (e.key === 'Escape') {
       e.preventDefault();
-      // Close any open dialog
-      document.querySelectorAll('dialog[open]').forEach(d => d.close());
+      // Close any open dialog properly
+      document.querySelectorAll('dialog[open]').forEach(d => {
+        if (d.id === 'task-modal' && typeof Modal !== 'undefined') {
+          Modal.close();
+        } else {
+          d.close();
+        }
+      });
       // Clear batch selection
       if (TaskManager.isSelectionMode()) {
         TaskManager.clearSelection();

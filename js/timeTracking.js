@@ -93,7 +93,8 @@ const TimeTracking = {
 
   // Format duration
   formatDuration(ms) {
-    if (ms < 1000) return '0秒';
+    if (!ms || ms <= 0) return '0秒';
+    if (ms < 1000) return '< 1秒';
 
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -110,7 +111,8 @@ const TimeTracking = {
 
   // Format duration short
   formatDurationShort(ms) {
-    if (ms < 1000) return '0s';
+    if (!ms || ms <= 0) return '0s';
+    if (ms < 1000) return '< 1s';
 
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);

@@ -230,6 +230,34 @@ const UI = {
       return;
     }
 
+    // Tag click to filter
+    const tagBadge = e.target.closest('.tag-badge-small');
+    if (tagBadge) {
+      e.stopPropagation();
+      const text = tagBadge.textContent.trim();
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = text;
+        this.currentSearch = text;
+        this.render();
+      }
+      return;
+    }
+
+    // Category click to filter
+    const categoryBadge = e.target.closest('.task-category');
+    if (categoryBadge) {
+      e.stopPropagation();
+      const text = categoryBadge.textContent.trim();
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = text;
+        this.currentSearch = text;
+        this.render();
+      }
+      return;
+    }
+
     // Checkbox click
     if (e.target.closest('.task-checkbox')) {
       e.stopPropagation();

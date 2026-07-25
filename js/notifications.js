@@ -76,8 +76,12 @@ const Notifications = {
           priority: 2
         });
 
-        // Mark as notified (partial update)
-        await Storage.updateTask(task.id, { reminder: { ...task.reminder, notified: true } });
+        // Mark as notified (partial update via TaskManager to sync in-memory cache)
+        if (typeof TaskManager !== 'undefined' && TaskManager.updateTask) {
+          await TaskManager.updateTask(task.id, { reminder: { ...task.reminder, notified: true } });
+        } else {
+          await Storage.updateTask(task.id, { reminder: { ...task.reminder, notified: true } });
+        }
       }
     }
   },
@@ -91,7 +95,7 @@ const Notifications = {
     const overdueTasks = tasks.filter(t => !t.completed && Utils.isOverdue(t.dueDate));
     const upcomingTasks = tasks.filter(t => {
       if (t.completed || !t.dueDate) return false;
-      const due = new Date(t.dueDate);
+      const due = Utils.parseLocalDate ? Utils.parseLocalDate(t.dueDate) : new Date(t.dueDate);
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
@@ -138,7 +142,11 @@ const Notifications = {
       if (task.reminder?.notified && !task.completed) {
         const dueDate = new Date(task.dueDate + 'T' + (task.dueTime || '23:59'));
         if (dueDate > now) {
-          await Storage.updateTask(task.id, { reminder: { ...task.reminder, notified: false } });
+          if (typeof TaskManager !== 'undefined' && TaskManager.updateTask) {
+            await TaskManager.updateTask(task.id, { reminder: { ...task.reminder, notified: false } });
+          } else {
+            await Storage.updateTask(task.id, { reminder: { ...task.reminder, notified: false } });
+          }
         }
       }
     }
