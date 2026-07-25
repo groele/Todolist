@@ -150,6 +150,9 @@ const UI = {
         if (title && taskId) {
           await TaskManager.addSubtask(taskId, title);
           this.render();
+          const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+          const newInput = card?.querySelector('.card-add-subtask-input');
+          if (newInput) newInput.focus();
         }
       }
     });

@@ -26,6 +26,14 @@ const Modal = {
       this.handleSubmit();
     });
 
+    // Ctrl+Enter / Cmd+Enter shortcut to save task
+    this.form.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        this.handleSubmit();
+      }
+    });
+
     // Cancel button & X close button
     document.getElementById('btn-cancel')?.addEventListener('click', () => {
       this.close();
