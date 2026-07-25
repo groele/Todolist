@@ -920,11 +920,39 @@
           </div>
           <div class="form-group flex-1">
             <div class="field-header">
-              <label for="task-due-time" class="icon-label">⏰ 具体时间</label>
+              <label class="icon-label">⏰ 具体时间</label>
               <button type="button" id="btn-clear-due-time" class="btn-text-action" title="清除时间">清除</button>
             </div>
-            <div class="input-icon-wrapper">
-              <input type="time" id="task-due-time" class="styled-datetime-input">
+            <input type="hidden" id="task-due-time">
+            <div class="custom-time-selectors">
+              <select id="task-due-hour" class="styled-select-time">
+                <option value="">-- 时 --</option>
+                <option value="06">06 时</option>
+                <option value="07">07 时</option>
+                <option value="08">08 时</option>
+                <option value="09">09 时</option>
+                <option value="10">10 时</option>
+                <option value="11">11 时</option>
+                <option value="12">12 时</option>
+                <option value="13">13 时</option>
+                <option value="14">14 时</option>
+                <option value="15">15 时</option>
+                <option value="16">16 时</option>
+                <option value="17">17 时</option>
+                <option value="18">18 时</option>
+                <option value="19">19 时</option>
+                <option value="20">20 时</option>
+                <option value="21">21 时</option>
+                <option value="22">22 时</option>
+                <option value="23">23 时</option>
+              </select>
+              <span class="time-colon">:</span>
+              <select id="task-due-minute" class="styled-select-time">
+                <option value="00">00 分</option>
+                <option value="15">15 分</option>
+                <option value="30">30 分</option>
+                <option value="45">45 分</option>
+              </select>
             </div>
             <div class="quick-time-pills">
               <button type="button" class="time-pill" data-time="09:00">🌅 09:00</button>

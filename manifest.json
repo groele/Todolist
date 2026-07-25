@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Todolist",
   "description": "Beautiful task management and schedule planning in your browser side panel.",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "minimum_chrome_version": "114",
   "icons": {
     "16": "images/icon-16.png",

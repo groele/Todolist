@@ -888,6 +888,37 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
+.custom-time-selectors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.styled-select-time {
+  flex: 1;
+  padding: 6px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.styled-select-time:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.time-colon {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .quick-date-pills,
 .quick-time-pills {
   display: flex;

@@ -65,14 +65,34 @@ const Modal = {
       });
     });
 
+    // Custom time selectors change
+    const hourSelect = document.getElementById('task-due-hour');
+    const minuteSelect = document.getElementById('task-due-minute');
+    const timeInput = document.getElementById('task-due-time');
+
+    const syncTimeFromDropdowns = () => {
+      if (hourSelect && minuteSelect && timeInput) {
+        if (hourSelect.value) {
+          timeInput.value = `${hourSelect.value}:${minuteSelect.value || '00'}`;
+        } else {
+          timeInput.value = '';
+        }
+      }
+    };
+
+    hourSelect?.addEventListener('change', syncTimeFromDropdowns);
+    minuteSelect?.addEventListener('change', syncTimeFromDropdowns);
+
     // Quick time pills
     document.querySelectorAll('.quick-time-pills .time-pill').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const timeVal = btn.dataset.time;
-        const timeInput = document.getElementById('task-due-time');
         if (timeInput && timeVal) {
           timeInput.value = timeVal;
+          const [h, m] = timeVal.split(':');
+          if (hourSelect) hourSelect.value = h;
+          if (minuteSelect) minuteSelect.value = m || '00';
         }
       });
     });
@@ -85,8 +105,9 @@ const Modal = {
     });
     document.getElementById('btn-clear-due-time')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const timeInput = document.getElementById('task-due-time');
       if (timeInput) timeInput.value = '';
+      if (hourSelect) hourSelect.value = '';
+      if (minuteSelect) minuteSelect.value = '00';
     });
 
     // Close on backdrop click
@@ -155,11 +176,21 @@ const Modal = {
     // Reset form
     this.form.reset();
 
+    const hourSelect = document.getElementById('task-due-hour');
+    const minuteSelect = document.getElementById('task-due-minute');
+    if (hourSelect) hourSelect.value = '';
+    if (minuteSelect) minuteSelect.value = '00';
+
     // Apply prefill if provided
     if (prefill) {
       if (prefill.title) document.getElementById('task-title').value = prefill.title;
       if (prefill.dueDate) document.getElementById('task-due-date').value = prefill.dueDate;
-      if (prefill.dueTime) document.getElementById('task-due-time').value = prefill.dueTime;
+      if (prefill.dueTime) {
+        document.getElementById('task-due-time').value = prefill.dueTime;
+        const [h, m] = prefill.dueTime.split(':');
+        if (hourSelect) hourSelect.value = h;
+        if (minuteSelect) minuteSelect.value = m || '00';
+      }
       if (prefill.priority) {
         const radio = this.form.querySelector(`input[name="priority"][value="${prefill.priority}"]`);
         if (radio) radio.checked = true;
@@ -211,6 +242,17 @@ const Modal = {
     document.getElementById('task-due-date').value = task.dueDate || '';
     document.getElementById('task-due-time').value = task.dueTime || '';
     document.getElementById('task-category').value = task.category || '';
+
+    const hourSelect = document.getElementById('task-due-hour');
+    const minuteSelect = document.getElementById('task-due-minute');
+    if (task.dueTime) {
+      const [h, m] = task.dueTime.split(':');
+      if (hourSelect) hourSelect.value = h;
+      if (minuteSelect) minuteSelect.value = m || '00';
+    } else {
+      if (hourSelect) hourSelect.value = '';
+      if (minuteSelect) minuteSelect.value = '00';
+    }
 
     // Set priority radio
     const radio = this.form.querySelector(`input[name="priority"][value="${task.priority}"]`);
