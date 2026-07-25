@@ -595,6 +595,28 @@
   margin-top: -1px;
 }
 
+.card-add-subtask-row {
+  margin-top: 4px;
+}
+
+.card-add-subtask-input {
+  width: 100%;
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.card-add-subtask-input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--primary);
+  background-color: var(--surface);
+}
+
 /* Task Actions */
 .task-actions {
   display: flex;

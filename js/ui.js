@@ -140,6 +140,20 @@ const UI = {
       this.handleTaskListClick(e);
     });
 
+    document.getElementById('task-list').addEventListener('keydown', async (e) => {
+      if (e.target.classList.contains('card-add-subtask-input') && e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const input = e.target;
+        const title = input.value.trim();
+        const taskId = input.dataset.taskId;
+        if (title && taskId) {
+          await TaskManager.addSubtask(taskId, title);
+          this.render();
+        }
+      }
+    });
+
     // Kanban view event delegation
     document.getElementById('kanban-view')?.addEventListener('click', (e) => {
       this.handleKanbanClick(e);
@@ -261,6 +275,12 @@ const UI = {
         this.currentSearch = text;
         this.render();
       }
+      return;
+    }
+
+    // Inline subtask input click
+    if (e.target.closest('.card-add-subtask-input')) {
+      e.stopPropagation();
       return;
     }
 
@@ -1054,23 +1074,32 @@ const UI = {
     // Build subtask progress and inline items HTML
     let subtaskHtml = '';
     const progress = TaskManager.getSubtaskProgress(task);
-    if (progress && task.subtasks?.length > 0) {
-      const subtaskItems = task.subtasks.map(st => `
-        <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
-          <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
-          <span class="card-subtask-text">${this.highlightText(st.title)}</span>
-        </div>
-      `).join('');
+    const hasSubtasks = task.subtasks && task.subtasks.length > 0;
 
-      subtaskHtml = `
-        <div class="subtask-progress">
-          <span class="subtask-progress-text">子任务 ${progress.completed}/${progress.total}</span>
-          <div class="subtask-progress-bar">
-            <div class="subtask-progress-fill" style="width: ${progress.percentage}%"></div>
-          </div>
+    const subtaskItems = hasSubtasks ? task.subtasks.map(st => `
+      <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
+        <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
+        <span class="card-subtask-text">${this.highlightText(st.title)}</span>
+      </div>
+    `).join('') : '';
+
+    const progressHeader = progress ? `
+      <div class="subtask-progress">
+        <span class="subtask-progress-text">子任务 ${progress.completed}/${progress.total}</span>
+        <div class="subtask-progress-bar">
+          <div class="subtask-progress-fill" style="width: ${progress.percentage}%"></div>
         </div>
+      </div>
+    ` : '';
+
+    if (hasSubtasks || !task.completed) {
+      subtaskHtml = `
+        ${progressHeader}
         <div class="card-subtasks-container">
           ${subtaskItems}
+          <div class="card-add-subtask-row">
+            <input type="text" class="card-add-subtask-input" placeholder="+ 添加子任务 (按 Enter 确认)" data-task-id="${task.id}" autocomplete="off" />
+          </div>
         </div>
       `;
     }
