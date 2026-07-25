@@ -26,9 +26,35 @@ const Modal = {
       this.handleSubmit();
     });
 
-    // Cancel button
-    document.getElementById('btn-cancel').addEventListener('click', () => {
+    // Cancel button & X close button
+    document.getElementById('btn-cancel')?.addEventListener('click', () => {
       this.close();
+    });
+    document.getElementById('btn-close-modal-x')?.addEventListener('click', () => {
+      this.close();
+    });
+
+    // Quick date pills
+    document.querySelectorAll('.quick-date-pills .date-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const type = btn.dataset.date;
+        const now = new Date();
+        let targetDate = new Date();
+
+        if (type === 'tomorrow') {
+          targetDate.setDate(now.getDate() + 1);
+        } else if (type === 'next-monday') {
+          const day = now.getDay();
+          const diff = (day === 0 ? 1 : 8 - day);
+          targetDate.setDate(now.getDate() + diff);
+        }
+
+        const dateInput = document.getElementById('task-due-date');
+        if (dateInput) {
+          dateInput.value = Utils.formatDate(targetDate);
+        }
+      });
     });
 
     // Close on backdrop click
@@ -91,6 +117,8 @@ const Modal = {
     this.currentSubtasks = [];
     this.currentTags = [];
     this.titleElement.textContent = '添加任务';
+    const iconEl = this.dialog.querySelector('.modal-header-icon');
+    if (iconEl) iconEl.textContent = '✨';
 
     // Reset form
     this.form.reset();
@@ -141,6 +169,8 @@ const Modal = {
     }));
     this.currentTags = task.tags ? [...task.tags] : [];
     this.titleElement.textContent = '编辑任务';
+    const iconEl = this.dialog.querySelector('.modal-header-icon');
+    if (iconEl) iconEl.textContent = '✏️';
 
     // Fill form with task data
     document.getElementById('task-id').value = task.id;
