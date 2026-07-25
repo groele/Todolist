@@ -249,6 +249,53 @@ const UI = {
       input.addEventListener('blur', save);
     });
 
+    // Double-click inline task description edit
+    document.getElementById('task-list').addEventListener('dblclick', async (e) => {
+      const descEl = e.target.closest('.task-description');
+      if (!descEl) return;
+      e.stopPropagation();
+
+      const cardEl = descEl.closest('.task-card');
+      if (!cardEl) return;
+      const taskId = cardEl.dataset.taskId;
+      const task = TaskManager.getTaskById(taskId);
+      if (!task) return;
+
+      const currentDesc = task.description || '';
+      const input = document.createElement('textarea');
+      input.className = 'card-add-subtask-input';
+      input.style.fontSize = '12px';
+      input.style.minHeight = '45px';
+      input.style.resize = 'vertical';
+      input.value = currentDesc;
+
+      descEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let saved = false;
+      const save = async () => {
+        if (saved) return;
+        saved = true;
+        const val = input.value.trim();
+        if (val !== currentDesc) {
+          await TaskManager.updateTask(taskId, { description: val });
+        }
+        this.render();
+      };
+
+      input.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
+          evt.preventDefault();
+          save();
+        } else if (evt.key === 'Escape') {
+          saved = true;
+          this.render();
+        }
+      });
+      input.addEventListener('blur', save);
+    });
+
     // Kanban view event delegation
     document.getElementById('kanban-view')?.addEventListener('click', (e) => {
       this.handleKanbanClick(e);
