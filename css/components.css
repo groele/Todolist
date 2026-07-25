@@ -834,6 +834,31 @@
   margin-bottom: 4px;
 }
 
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.field-header label {
+  margin-bottom: 0;
+}
+
+.btn-text-action {
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color var(--transition-fast);
+}
+
+.btn-text-action:hover {
+  color: var(--danger);
+}
+
 .date-time-card {
   background: var(--bg);
   border: 1px solid var(--border);

@@ -77,6 +77,18 @@ const Modal = {
       });
     });
 
+    // Clear date and clear time buttons
+    document.getElementById('btn-clear-due-date')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const dateInput = document.getElementById('task-due-date');
+      if (dateInput) dateInput.value = '';
+    });
+    document.getElementById('btn-clear-due-time')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const timeInput = document.getElementById('task-due-time');
+      if (timeInput) timeInput.value = '';
+    });
+
     // Close on backdrop click
     this.dialog.addEventListener('click', (e) => {
       if (e.target === this.dialog) {
