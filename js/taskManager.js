@@ -125,6 +125,11 @@ const TaskManager = {
     task.completedAt = task.completed ? new Date().toISOString() : null;
     task.status = task.completed ? 'done' : (Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo');
 
+    // Sync subtask completion when completing parent task
+    if (task.completed && task.subtasks?.length > 0) {
+      task.subtasks.forEach(st => st.completed = true);
+    }
+
     await Storage.updateTask(id, task);
     return task;
   },
@@ -173,6 +178,13 @@ const TaskManager = {
     if (!task.subtasks) task.subtasks = [];
     task.subtasks.push(subtask);
 
+    // Adding an incomplete subtask uncompletes parent if completed
+    if (task.completed) {
+      task.completed = false;
+      task.completedAt = null;
+      task.status = Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo';
+    }
+
     await Storage.updateTask(taskId, task);
     return subtask;
   },
@@ -185,6 +197,19 @@ const TaskManager = {
     if (!subtask) return null;
 
     subtask.completed = !subtask.completed;
+
+    // Auto-sync parent completion
+    const allCompleted = task.subtasks.length > 0 && task.subtasks.every(st => st.completed);
+    if (allCompleted) {
+      task.completed = true;
+      task.completedAt = task.completedAt || new Date().toISOString();
+      task.status = 'done';
+    } else if (!subtask.completed && task.completed) {
+      task.completed = false;
+      task.completedAt = null;
+      task.status = Utils.isOverdue(task.dueDate) ? 'overdue' : 'todo';
+    }
+
     await Storage.updateTask(taskId, task);
     return subtask;
   },

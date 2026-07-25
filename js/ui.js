@@ -202,6 +202,53 @@ const UI = {
       input.addEventListener('blur', save);
     });
 
+    // Double-click inline task title edit
+    document.getElementById('task-list').addEventListener('dblclick', async (e) => {
+      const titleEl = e.target.closest('.task-title');
+      if (!titleEl) return;
+      e.stopPropagation();
+
+      const cardEl = titleEl.closest('.task-card');
+      if (!cardEl) return;
+      const taskId = cardEl.dataset.taskId;
+      const task = TaskManager.getTaskById(taskId);
+      if (!task) return;
+
+      const currentTitle = task.title;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'card-add-subtask-input';
+      input.style.fontSize = '14px';
+      input.style.fontWeight = '500';
+      input.value = currentTitle;
+
+      titleEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let saved = false;
+      const save = async () => {
+        if (saved) return;
+        saved = true;
+        const val = input.value.trim();
+        if (val && val !== currentTitle) {
+          await TaskManager.updateTask(taskId, { title: val });
+        }
+        this.render();
+      };
+
+      input.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter') {
+          evt.preventDefault();
+          save();
+        } else if (evt.key === 'Escape') {
+          saved = true;
+          this.render();
+        }
+      });
+      input.addEventListener('blur', save);
+    });
+
     // Kanban view event delegation
     document.getElementById('kanban-view')?.addEventListener('click', (e) => {
       this.handleKanbanClick(e);

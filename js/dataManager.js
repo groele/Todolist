@@ -9,7 +9,7 @@ const DataManager = {
     });
 
     const exportData = {
-      version: '1.6.0',
+      version: '1.7.0',
       exportDate: new Date().toISOString(),
       tasks: data.tasks,
       settings: data.settings,
