@@ -154,6 +154,54 @@ const UI = {
       }
     });
 
+    // Double-click inline subtask edit
+    document.getElementById('task-list').addEventListener('dblclick', async (e) => {
+      const textEl = e.target.closest('.card-subtask-text');
+      if (!textEl) return;
+      e.stopPropagation();
+
+      const itemEl = textEl.closest('.card-subtask-item');
+      const cardEl = textEl.closest('.task-card');
+      if (!itemEl || !cardEl) return;
+
+      const subtaskId = itemEl.querySelector('.card-subtask-checkbox')?.dataset.subtaskId;
+      const taskId = cardEl.dataset.taskId;
+      if (!subtaskId || !taskId) return;
+
+      const currentTitle = textEl.textContent.trim();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'card-add-subtask-input';
+      input.style.padding = '1px 4px';
+      input.value = currentTitle;
+
+      textEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let saved = false;
+      const save = async () => {
+        if (saved) return;
+        saved = true;
+        const val = input.value.trim();
+        if (val && val !== currentTitle) {
+          await TaskManager.updateSubtask(taskId, subtaskId, val);
+        }
+        this.render();
+      };
+
+      input.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter') {
+          evt.preventDefault();
+          save();
+        } else if (evt.key === 'Escape') {
+          saved = true;
+          this.render();
+        }
+      });
+      input.addEventListener('blur', save);
+    });
+
     // Kanban view event delegation
     document.getElementById('kanban-view')?.addEventListener('click', (e) => {
       this.handleKanbanClick(e);

@@ -198,6 +198,18 @@ const TaskManager = {
     return true;
   },
 
+  async updateSubtask(taskId, subtaskId, newTitle) {
+    const task = this.getTaskById(taskId);
+    if (!task || !task.subtasks) return null;
+
+    const subtask = task.subtasks.find(st => st.id === subtaskId);
+    if (!subtask) return null;
+
+    subtask.title = newTitle.trim();
+    await Storage.updateTask(taskId, task);
+    return subtask;
+  },
+
   // Batch operations
   toggleSelection(taskId) {
     if (this._selectedTasks.has(taskId)) {
