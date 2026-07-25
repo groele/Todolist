@@ -864,17 +864,36 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
-.date-time-row {
+.date-field-section,
+.time-field-section {
   display: flex;
-  gap: var(--space-md);
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-field-section {
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--border);
+}
+
+.date-input-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.date-input-row .styled-datetime-input {
+  flex: 1;
 }
 
 .styled-datetime-input {
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 5px 10px;
+  font-size: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--surface);
@@ -888,15 +907,27 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.custom-time-selectors {
+.time-presets-toolbar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.time-custom-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.custom-time-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .styled-select-time {
-  flex: 1;
-  padding: 6px 6px;
+  padding: 4px 8px;
   font-size: 12px;
   font-weight: 500;
   border: 1px solid var(--border);
