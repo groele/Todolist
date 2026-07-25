@@ -23,15 +23,15 @@ const Shortcuts = {
       return;
     }
 
-    // Ctrl/Cmd + N: New task
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    // Ctrl/Cmd + N or N: New task
+    if (((e.ctrlKey || e.metaKey) && e.key === 'n') || (e.key === 'n' && !e.ctrlKey && !e.metaKey)) {
       e.preventDefault();
       Modal.openAdd();
       return;
     }
 
-    // Ctrl/Cmd + F: Focus search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    // Ctrl/Cmd + F or /: Focus search
+    if (((e.ctrlKey || e.metaKey) && e.key === 'f') || (e.key === '/' && !e.ctrlKey && !e.metaKey)) {
       e.preventDefault();
       document.getElementById('search-input')?.focus();
       return;

@@ -258,6 +258,16 @@ const UI = {
       return;
     }
 
+    // Inline subtask checkbox click
+    const subtaskCheckbox = e.target.closest('.card-subtask-checkbox');
+    if (subtaskCheckbox) {
+      e.stopPropagation();
+      const subtaskId = subtaskCheckbox.dataset.subtaskId;
+      await TaskManager.toggleSubtask(taskId, subtaskId);
+      this.render();
+      return;
+    }
+
     // Checkbox click
     if (e.target.closest('.task-checkbox')) {
       e.stopPropagation();
@@ -919,16 +929,26 @@ const UI = {
       categoryHtml = `<span class="task-category">${Utils.escapeHtml(task.category)}</span>`;
     }
 
-    // Build subtask progress HTML
+    // Build subtask progress and inline items HTML
     let subtaskHtml = '';
     const progress = TaskManager.getSubtaskProgress(task);
-    if (progress) {
+    if (progress && task.subtasks?.length > 0) {
+      const subtaskItems = task.subtasks.map(st => `
+        <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
+          <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
+          <span class="card-subtask-text">${Utils.escapeHtml(st.title)}</span>
+        </div>
+      `).join('');
+
       subtaskHtml = `
         <div class="subtask-progress">
-          <span class="subtask-progress-text">${progress.completed}/${progress.total}</span>
+          <span class="subtask-progress-text">子任务 ${progress.completed}/${progress.total}</span>
           <div class="subtask-progress-bar">
             <div class="subtask-progress-fill" style="width: ${progress.percentage}%"></div>
           </div>
+        </div>
+        <div class="card-subtasks-container">
+          ${subtaskItems}
         </div>
       `;
     }
