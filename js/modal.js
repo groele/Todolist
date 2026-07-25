@@ -65,6 +65,18 @@ const Modal = {
       });
     });
 
+    // Quick time pills
+    document.querySelectorAll('.quick-time-pills .time-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const timeVal = btn.dataset.time;
+        const timeInput = document.getElementById('task-due-time');
+        if (timeInput && timeVal) {
+          timeInput.value = timeVal;
+        }
+      });
+    });
+
     // Close on backdrop click
     this.dialog.addEventListener('click', (e) => {
       if (e.target === this.dialog) {

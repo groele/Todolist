@@ -187,19 +187,27 @@
         <textarea id="task-description" rows="2" placeholder="添加备注或详细说明（可选）"></textarea>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="task-due-date">截止日期</label>
-          <input type="date" id="task-due-date">
-          <div class="quick-date-pills">
-            <button type="button" class="date-pill" data-date="today">今天</button>
-            <button type="button" class="date-pill" data-date="tomorrow">明天</button>
-            <button type="button" class="date-pill" data-date="next-monday">下周一</button>
+      <div class="date-time-card">
+        <div class="date-time-row">
+          <div class="form-group flex-1">
+            <label for="task-due-date" class="icon-label">📅 截止日期</label>
+            <input type="date" id="task-due-date" class="styled-datetime-input">
+            <div class="quick-date-pills">
+              <button type="button" class="date-pill" data-date="today">今天</button>
+              <button type="button" class="date-pill" data-date="tomorrow">明天</button>
+              <button type="button" class="date-pill" data-date="next-monday">下周一</button>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label for="task-due-time">具体时间</label>
-          <input type="time" id="task-due-time">
+          <div class="form-group flex-1">
+            <label for="task-due-time" class="icon-label">⏰ 具体时间</label>
+            <input type="time" id="task-due-time" class="styled-datetime-input">
+            <div class="quick-time-pills">
+              <button type="button" class="time-pill" data-time="09:00">09:00</button>
+              <button type="button" class="time-pill" data-time="14:00">14:00</button>
+              <button type="button" class="time-pill" data-time="18:00">18:00</button>
+              <button type="button" class="time-pill" data-time="20:00">20:00</button>
+            </div>
+          </div>
         </div>
       </div>
 

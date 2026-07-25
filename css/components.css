@@ -834,24 +834,57 @@
   margin-bottom: 4px;
 }
 
-.quick-date-pills {
+.date-time-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+
+.date-time-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.styled-datetime-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  color: var(--text);
+  transition: all var(--transition-fast);
+}
+
+.styled-datetime-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.quick-date-pills,
+.quick-time-pills {
   display: flex;
   gap: 4px;
   margin-top: 6px;
+  flex-wrap: wrap;
 }
 
-.date-pill {
-  padding: 2px 8px;
+.date-pill,
+.time-pill {
+  padding: 2px 7px;
   font-size: 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.date-pill:hover {
+.date-pill:hover,
+.time-pill:hover {
   border-color: var(--primary);
   color: var(--primary);
   background-color: var(--primary-bg);
