@@ -1,0 +1,1014 @@
+// UI module - DOM rendering and event handling
+
+const UI = {
+  currentView: 'list',
+  currentFilter: 'all',
+  currentSearch: '',
+  currentPriorityFilter: 'all',
+  currentSortOrder: 'dueDate',
+  currentTheme: 'light',
+
+  // Initialize UI
+  async init() {
+    // Load theme preference
+    const settings = await Storage.getSettings();
+    this.currentTheme = settings.theme || 'light';
+    this.applyTheme(this.currentTheme);
+
+    this.setupEventListeners();
+    await TaskManager.loadTasks();
+    this.render();
+
+    // Initialize drag and drop
+    DragDrop.init();
+
+    // Initialize keyboard shortcuts
+    Shortcuts.init();
+
+    // Load templates
+    await Templates.loadCustomTemplates();
+
+    // Check for pending task from context menu
+    this.checkPendingTask();
+
+    // Listen for context menu task messages
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === 'CONTEXT_MENU_TASK') {
+        this.checkPendingTask();
+      }
+    });
+  },
+
+  // Check for pending task from context menu
+  async checkPendingTask() {
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get('pendingTask', resolve);
+    });
+
+    if (result.pendingTask) {
+      // Clear the pending task
+      await chrome.storage.local.remove('pendingTask');
+
+      // Open modal with the task data
+      Modal.openAdd({
+        title: result.pendingTask.title,
+        description: result.pendingTask.description || ''
+      });
+    }
+  },
+
+  // Setup event listeners
+  setupEventListeners() {
+    // Add task button
+    document.getElementById('btn-add').addEventListener('click', () => {
+      Modal.openAdd();
+    });
+
+    // Add first task button (empty state)
+    document.getElementById('btn-add-first')?.addEventListener('click', () => {
+      Modal.openAdd();
+    });
+
+    // Toggle view button
+    document.getElementById('btn-toggle-view').addEventListener('click', () => {
+      this.cycleView();
+    });
+
+    // Theme toggle button
+    document.getElementById('btn-theme')?.addEventListener('click', () => {
+      this.toggleTheme();
+    });
+
+    // Stats button
+    document.getElementById('btn-stats')?.addEventListener('click', () => {
+      this.showStats();
+    });
+
+    // Settings button
+    document.getElementById('btn-settings')?.addEventListener('click', () => {
+      this.openSettings();
+    });
+
+    // Templates button
+    document.getElementById('btn-templates')?.addEventListener('click', () => {
+      this.openTemplates();
+    });
+
+    // Search input
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('input', Utils.debounce((e) => {
+      this.currentSearch = e.target.value;
+      this.render();
+      this.updateSearchSuggestions(e.target.value);
+    }, 300));
+
+    searchInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && searchInput.value.trim()) {
+        await Advanced.addToSearchHistory(searchInput.value.trim());
+      }
+    });
+
+    // Filter select
+    document.getElementById('filter-select').addEventListener('change', (e) => {
+      this.currentPriorityFilter = e.target.value;
+      this.render();
+    });
+
+    // Sort select
+    document.getElementById('sort-select')?.addEventListener('change', (e) => {
+      this.currentSortOrder = e.target.value;
+      this.render();
+    });
+
+    // Filter tabs
+    document.querySelectorAll('.filter-tabs .tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        this.currentFilter = e.target.dataset.filter;
+        this.updateActiveTab();
+        this.render();
+      });
+    });
+
+    // Task list event delegation
+    document.getElementById('task-list').addEventListener('click', (e) => {
+      this.handleTaskListClick(e);
+    });
+
+    // Kanban view event delegation
+    document.getElementById('kanban-view')?.addEventListener('click', (e) => {
+      this.handleKanbanClick(e);
+    });
+
+    // Calendar date click - switch to list view and show filtered tasks
+    Calendar.onDateClick(async (dateStr) => {
+      this.currentFilter = 'date';
+      this.updateActiveTab();
+      if (this.currentView !== 'list') {
+        this.currentView = 'list';
+        // Show list view, hide others
+        document.getElementById('list-view').classList.add('active');
+        document.getElementById('list-view').classList.remove('hidden');
+        document.getElementById('calendar-view').classList.remove('active');
+        document.getElementById('calendar-view').classList.add('hidden');
+        document.getElementById('kanban-view')?.classList.remove('active');
+        document.getElementById('kanban-view')?.classList.add('hidden');
+        document.getElementById('stats-view')?.classList.remove('active');
+        document.getElementById('stats-view')?.classList.add('hidden');
+        // Update toggle button
+        const btn = document.getElementById('btn-toggle-view');
+        if (btn) {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>';
+          btn.title = '日历视图';
+        }
+      }
+      this.render();
+    });
+
+    // Batch operations
+    document.getElementById('btn-batch-complete')?.addEventListener('click', async () => {
+      const count = await TaskManager.batchComplete();
+      this.showToast(`已完成 ${count} 个任务`);
+      this.render();
+      this.updateBatchBar();
+    });
+
+    document.getElementById('btn-batch-delete')?.addEventListener('click', async () => {
+      const count = await TaskManager.batchDelete();
+      this.showToast(`已删除 ${count} 个任务`);
+      this.render();
+      this.updateBatchBar();
+    });
+
+    document.getElementById('btn-batch-cancel')?.addEventListener('click', () => {
+      TaskManager.clearSelection();
+      this.render();
+      this.updateBatchBar();
+    });
+
+    // Long press for selection mode
+    let longPressTimer = null;
+    document.getElementById('task-list').addEventListener('mousedown', (e) => {
+      const taskCard = e.target.closest('.task-card');
+      if (!taskCard) return;
+
+      longPressTimer = setTimeout(() => {
+        this._justLongPressed = true;
+        TaskManager.setSelectionMode(true);
+        const taskId = taskCard.dataset.taskId;
+        TaskManager.toggleSelection(taskId);
+        this.render();
+        this.updateBatchBar();
+      }, 500);
+    });
+
+    document.getElementById('task-list').addEventListener('mouseup', () => {
+      clearTimeout(longPressTimer);
+    });
+
+    document.getElementById('task-list').addEventListener('mouseleave', () => {
+      clearTimeout(longPressTimer);
+    });
+  },
+
+  // Handle task list clicks
+  async handleTaskListClick(e) {
+    if (this._justLongPressed) {
+      this._justLongPressed = false;
+      return;
+    }
+
+    const taskCard = e.target.closest('.task-card');
+    if (!taskCard) return;
+
+    const taskId = taskCard.dataset.taskId;
+
+    // In selection mode, clicking anywhere on card toggles selection
+    if (TaskManager.isSelectionMode()) {
+      TaskManager.toggleSelection(taskId);
+      this.render();
+      this.updateBatchBar();
+      return;
+    }
+
+    // Checkbox click
+    if (e.target.closest('.task-checkbox')) {
+      e.stopPropagation();
+      await this.handleToggleComplete(taskId, taskCard);
+      return;
+    }
+
+    // Delete button click
+    if (e.target.closest('.task-action.delete')) {
+      e.stopPropagation();
+      await this.handleDeleteTask(taskId, taskCard);
+      return;
+    }
+
+    // Edit button click
+    if (e.target.closest('.task-action.edit')) {
+      e.stopPropagation();
+      Modal.openEdit(taskId);
+      return;
+    }
+
+    // Duplicate button click
+    if (e.target.closest('.task-action.duplicate')) {
+      e.stopPropagation();
+      await this.handleDuplicateTask(taskId);
+      return;
+    }
+
+    // Timer button click
+    if (e.target.closest('.task-action.timer')) {
+      e.stopPropagation();
+      await this.handleTimerToggle(taskId);
+      return;
+    }
+
+    // Card click (not on action buttons)
+    Modal.openEdit(taskId);
+  },
+
+  // Handle timer toggle
+  async handleTimerToggle(taskId) {
+    if (TimeTracking.isTimerRunning(taskId)) {
+      const elapsed = await TimeTracking.stopTimer(taskId);
+      this.showToast(`计时停止: ${TimeTracking.formatDuration(elapsed)}`);
+    } else {
+      await TimeTracking.startTimer(taskId);
+      this.showToast('计时开始');
+    }
+    this.render();
+  },
+
+  // Handle kanban clicks
+  async handleKanbanClick(e) {
+    const kanbanTask = e.target.closest('.kanban-task');
+    if (kanbanTask) {
+      const taskId = kanbanTask.dataset.taskId;
+      Modal.openEdit(taskId);
+    }
+  },
+
+  // Handle toggle complete
+  async handleToggleComplete(taskId, taskCard) {
+    const checkbox = taskCard.querySelector('.task-checkbox');
+
+    // Add animation
+    checkbox.classList.add('just-checked');
+    setTimeout(() => checkbox.classList.remove('just-checked'), 200);
+
+    const task = await TaskManager.toggleComplete(taskId);
+
+    // Check for recurring task - auto create next instance
+    if (task && task.completed && task.repeat) {
+      const newTask = await Recurring.createNextTask(task);
+      if (newTask) {
+        this.showToast(`已创建下一个重复任务`);
+      }
+    }
+
+    this.render();
+
+    // Update badge
+    this.notifyServiceWorker();
+  },
+
+  // Handle delete task
+  async handleDeleteTask(taskId, taskCard) {
+    // Add exit animation
+    taskCard.classList.add('removing');
+
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    const deletedTask = await TaskManager.deleteTask(taskId);
+    this.render();
+
+    // Show undo toast
+    this.showToast('任务已删除', true);
+
+    // Update badge
+    this.notifyServiceWorker();
+  },
+
+  // Handle duplicate task
+  async handleDuplicateTask(taskId) {
+    const newTask = await TaskManager.duplicateTask(taskId);
+    if (newTask) {
+      this.showToast('任务已复制');
+      this.render();
+    }
+  },
+
+  // Update search suggestions
+  updateSearchSuggestions(query) {
+    const suggestions = Advanced.getSearchSuggestions(query);
+    const datalist = document.getElementById('search-suggestions');
+    if (datalist) {
+      datalist.innerHTML = suggestions.map(s => `<option value="${s}">`).join('');
+    }
+  },
+
+  // Update batch operation bar
+  updateBatchBar() {
+    const batchBar = document.getElementById('batch-bar');
+    if (!batchBar) return;
+
+    const count = TaskManager.getSelectedCount();
+    if (count > 0) {
+      batchBar.classList.add('show');
+      const info = batchBar.querySelector('.batch-info');
+      if (info) {
+        info.innerHTML = `已选择 <strong>${count}</strong> 个任务`;
+      }
+    } else {
+      batchBar.classList.remove('show');
+    }
+  },
+
+  // Notify service worker with error handling
+  notifyServiceWorker() {
+    try {
+      chrome.runtime.sendMessage({ type: 'TASKS_UPDATED' }).catch(() => {});
+    } catch (e) {
+      // Service worker may be inactive
+    }
+  },
+
+  // Cycle through views: list -> calendar -> kanban -> list
+  cycleView() {
+    const views = ['list', 'calendar', 'kanban'];
+    const currentIndex = views.indexOf(this.currentView);
+    const nextIndex = (currentIndex + 1) % views.length;
+    this.switchView(views[nextIndex]);
+  },
+
+  // Switch to specific view
+  async switchView(view) {
+    this.currentView = view;
+
+    // Update view visibility
+    const viewIds = ['list-view', 'calendar-view', 'kanban-view', 'stats-view'];
+    viewIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.toggle('active', id === view + '-view');
+        el.classList.toggle('hidden', id !== view + '-view');
+      }
+    });
+
+    // Update button icon
+    const btn = document.getElementById('btn-toggle-view');
+    const icons = {
+      list: `<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>`,
+      calendar: `<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>`,
+      kanban: `<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7 19H5v-6h2v6zm0-8H5V5h2v6zm6 8h-2v-4h2v4zm0-6h-2V5h2v6zm6 6h-2v-8h2v8z"/></svg>`
+    };
+
+    const titles = { list: '日历视图', calendar: '看板视图', kanban: '列表视图' };
+
+    if (btn) {
+      btn.innerHTML = icons[view] || icons.list;
+      btn.title = titles[view] || '切换视图';
+    }
+
+    // Render the view
+    if (view === 'calendar') {
+      await Calendar.render();
+    } else if (view === 'kanban') {
+      this.renderKanban();
+    } else if (view === 'stats') {
+      this.showStats();
+    } else {
+      this.render();
+    }
+  },
+
+  // Toggle theme
+  async toggleTheme() {
+    const themes = ['light', 'dark', 'auto'];
+    const currentIndex = themes.indexOf(this.currentTheme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    this.currentTheme = themes[nextIndex];
+
+    this.applyTheme(this.currentTheme);
+
+    // Save preference
+    const settings = await Storage.getSettings();
+    settings.theme = this.currentTheme;
+    await Storage.saveSettings(settings);
+
+    this.showToast(`主题已切换：${this.currentTheme === 'light' ? '浅色' : this.currentTheme === 'dark' ? '深色' : '跟随系统'}`);
+  },
+
+  // Apply theme
+  applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // Update theme button icon
+    const btn = document.getElementById('btn-theme');
+    if (btn) {
+      const icons = {
+        light: '☀️',
+        dark: '🌙',
+        auto: '🔄'
+      };
+      btn.textContent = icons[theme] || '☀️';
+      btn.title = `当前主题：${theme === 'light' ? '浅色' : theme === 'dark' ? '深色' : '跟随系统'}`;
+    }
+  },
+
+  // Render the task list
+  render() {
+    const filters = {
+      search: this.currentSearch,
+      priority: this.currentPriorityFilter,
+      sortOrder: this.currentSortOrder || 'dueDate'
+    };
+
+    // Handle date filter separately - don't pass to getGroupedTasks
+    if (this.currentFilter === 'date') {
+      const selectedDate = Calendar.getSelectedDate();
+      if (selectedDate) {
+        const dateTasks = TaskManager.getFilteredTasks({ ...filters, date: selectedDate });
+        const sorted = TaskManager.getSortedTasks(dateTasks, 'dueDate');
+        this.renderDateFilterResults(sorted, selectedDate);
+        return;
+      }
+    }
+
+    filters.status = this.currentFilter;
+    const groups = TaskManager.getGroupedTasks(filters);
+    const container = document.getElementById('task-list');
+    const emptyState = document.getElementById('empty-state');
+
+    // Check if we have any tasks
+    const totalTasks = Object.values(groups).reduce((sum, group) => sum + group.length, 0);
+
+    if (totalTasks === 0) {
+      container.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      // Update empty state message based on filter
+      const emptyMsg = emptyState.querySelector('p');
+      if (emptyMsg) {
+        if (this.currentSearch) {
+          emptyMsg.textContent = '未找到匹配的任务';
+        } else if (this.currentFilter === 'today') {
+          emptyMsg.textContent = '今天没有待办任务';
+        } else if (this.currentFilter === 'overdue') {
+          emptyMsg.textContent = '太棒了！没有逾期任务';
+        } else if (this.currentFilter === 'completed') {
+          emptyMsg.textContent = '还没有已完成的任务';
+        } else if (this.currentPriorityFilter !== 'all') {
+          emptyMsg.textContent = '没有该优先级的任务';
+        } else {
+          emptyMsg.textContent = '还没有任务';
+        }
+      }
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    container.innerHTML = '';
+
+    // Add quick add input
+    const quickAdd = document.createElement('div');
+    quickAdd.className = 'quick-add';
+    quickAdd.innerHTML = `
+      <input type="text" id="quick-add-input" placeholder="快速添加任务，按 Enter 确认..." autocomplete="off">
+    `;
+    container.appendChild(quickAdd);
+
+    // Wire up quick add
+    const quickAddInput = document.getElementById('quick-add-input');
+    if (quickAddInput) {
+      quickAddInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && quickAddInput.value.trim()) {
+          await TaskManager.addTask({ title: quickAddInput.value.trim() });
+          quickAddInput.value = '';
+          this.render();
+          this.notifyServiceWorker();
+          this.showToast('任务已添加');
+        }
+      });
+    }
+
+    // Render each section
+    const sections = [
+      { key: 'overdue', title: '已逾期', icon: '⚠️', className: 'section-overdue' },
+      { key: 'today', title: '今天', icon: '📅', className: 'section-today' },
+      { key: 'upcoming', title: '即将到来', icon: '📋', className: 'section-upcoming' },
+      { key: 'completed', title: '已完成', icon: '✅', className: 'section-completed' }
+    ];
+
+    sections.forEach(section => {
+      const tasks = groups[section.key];
+      if (tasks.length === 0) return;
+
+      const sectionElement = this.createSectionElement(section, tasks);
+      container.appendChild(sectionElement);
+    });
+
+    // Make task cards draggable
+    container.querySelectorAll('.task-card').forEach(card => {
+      DragDrop.makeDraggable(card);
+    });
+  },
+
+  // Render kanban view
+  renderKanban() {
+    const kanbanData = TaskManager.getKanbanTasks();
+    const container = document.getElementById('kanban-view');
+    if (!container) return;
+
+    const columns = [
+      { key: 'overdue', title: '已逾期', icon: '⚠️' },
+      { key: 'todo', title: '待办', icon: '📋' },
+      { key: 'in-progress', title: '进行中', icon: '🔄' },
+      { key: 'done', title: '已完成', icon: '✅' }
+    ];
+
+    container.innerHTML = columns.map(col => `
+      <div class="kanban-column ${col.key}" data-column="${col.key}">
+        <div class="kanban-column-header">
+          <div class="kanban-column-title">
+            <span>${col.icon}</span>
+            <span>${col.title}</span>
+          </div>
+          <span class="kanban-column-count">${(kanbanData[col.key] || []).length}</span>
+        </div>
+        <div class="kanban-column-content" data-column="${col.key}">
+          ${(kanbanData[col.key] || []).map(task => this.createKanbanTask(task)).join('')}
+          ${(kanbanData[col.key] || []).length === 0 ? '<div class="kanban-empty">暂无任务</div>' : ''}
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.kanban-task').forEach(card => {
+      DragDrop.makeKanbanDraggable(card);
+    });
+  },
+
+  // Create kanban task HTML
+  createKanbanTask(task) {
+    const progress = TaskManager.getSubtaskProgress(task);
+    const progressHtml = progress ? `
+      <div class="kanban-task-progress">
+        <div class="progress-bar" style="height: 4px; margin-top: 8px;">
+          <div class="progress-fill" style="width: ${progress.percentage}%"></div>
+        </div>
+        <span style="font-size: 11px; color: var(--text-muted);">${progress.completed}/${progress.total}</span>
+      </div>
+    ` : '';
+
+    return `
+      <div class="kanban-task" data-task-id="${task.id}">
+        <div class="kanban-task-title">${Utils.escapeHtml(task.title)}</div>
+        <div class="kanban-task-meta">
+          <span class="kanban-task-priority ${task.priority}"></span>
+          ${task.dueDate ? `<span class="kanban-task-date ${Utils.isOverdue(task.dueDate) ? 'overdue' : ''}">${Utils.formatRelativeDate(task.dueDate)}</span>` : ''}
+        </div>
+        ${progressHtml}
+      </div>
+    `;
+  },
+
+  // Open settings modal
+  openSettings() {
+    const dialog = document.getElementById('settings-modal');
+    if (!dialog) return;
+
+    // Wire up buttons (only once)
+    if (!dialog._wired) {
+      // Export JSON
+      document.getElementById('btn-export-json')?.addEventListener('click', async () => {
+        await DataManager.exportData();
+        this.showToast('JSON 数据已导出');
+      });
+
+      // Export CSV
+      document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
+        const tasks = await Storage.getTasks();
+        Advanced.exportToCSV(tasks);
+        this.showToast('CSV 文件已导出');
+      });
+
+      // Export Markdown
+      document.getElementById('btn-export-md')?.addEventListener('click', async () => {
+        const tasks = await Storage.getTasks();
+        Advanced.exportToMarkdown(tasks);
+        this.showToast('Markdown 文件已导出');
+      });
+
+      // Export TXT
+      document.getElementById('btn-export-txt')?.addEventListener('click', async () => {
+        const tasks = await Storage.getTasks();
+        Advanced.exportToText(tasks);
+        this.showToast('TXT 文件已导出');
+      });
+
+      // Import
+      document.getElementById('btn-import-data')?.addEventListener('click', () => {
+        document.getElementById('import-file')?.click();
+      });
+
+      document.getElementById('import-file')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const result = await DataManager.importData(file, 'merge');
+          this.showToast(`已导入 ${result.imported} 个任务`);
+          this.render();
+        } catch (error) {
+          this.showToast('导入失败：' + error.message);
+        }
+        e.target.value = '';
+      });
+
+      // Print
+      document.getElementById('btn-print')?.addEventListener('click', async () => {
+        const tasks = await Storage.getTasks();
+        Advanced.printTasks(tasks);
+      });
+
+      // Share summary
+      document.getElementById('btn-share-summary')?.addEventListener('click', async () => {
+        const tasks = await Storage.getTasks();
+        const summary = Advanced.generateSummary(tasks);
+        await Advanced.copyToClipboard(summary);
+        this.showToast('任务概览已复制到剪贴板');
+      });
+
+      // Clear data
+      document.getElementById('btn-clear-data')?.addEventListener('click', async () => {
+        if (confirm('确定要清除所有数据吗？此操作不可恢复。')) {
+          await DataManager.clearAllTasks();
+          this.showToast('所有数据已清除');
+          this.render();
+          dialog.close();
+        }
+      });
+
+      // Close
+      document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+        dialog.close();
+      });
+
+      dialog._wired = true;
+    }
+
+    dialog.showModal();
+  },
+
+  // Open templates panel
+  openTemplates() {
+    const dialog = document.getElementById('templates-modal');
+    if (dialog) {
+      // Update templates
+      const content = dialog.querySelector('.templates-grid');
+      if (content) {
+        content.innerHTML = Templates.getAllTemplates().map(t => `
+          <div class="template-card" data-template-id="${t.id}">
+            <div class="template-icon">${t.icon}</div>
+            <div class="template-name">${t.name}</div>
+            <div class="template-desc">${t.task.subtasks.length} 个子任务</div>
+          </div>
+        `).join('');
+      }
+      dialog.showModal();
+      return;
+    }
+
+    // Create modal
+    const modal = document.createElement('dialog');
+    modal.id = 'templates-modal';
+    modal.className = 'modal';
+    modal.innerHTML = Templates.renderTemplatesPanel();
+
+    document.body.appendChild(modal);
+
+    // Wire up events
+    modal.querySelector('.templates-grid')?.addEventListener('click', (e) => {
+      const card = e.target.closest('.template-card');
+      if (card) {
+        const templateId = card.dataset.templateId;
+        Templates.applyTemplate(templateId);
+        modal.close();
+      }
+    });
+
+    modal.querySelector('#btn-close-templates')?.addEventListener('click', () => {
+      modal.close();
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.close();
+      }
+    });
+
+    modal.showModal();
+  },
+
+  // Show statistics
+  async showStats() {
+    this.currentView = 'stats';
+    const container = document.getElementById('stats-view');
+    if (!container) return;
+
+    // Hide other views
+    ['list-view', 'calendar-view', 'kanban-view'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('active');
+        el.classList.add('hidden');
+      }
+    });
+
+    container.classList.add('active');
+    container.classList.remove('hidden');
+
+    // Render stats
+    container.innerHTML = await DataManager.renderStats();
+
+    // Add close button handler
+    document.getElementById('btn-close-stats')?.addEventListener('click', () => {
+      this.switchView('list');
+    });
+  },
+
+  // Render date filter results (flat list, not grouped)
+  renderDateFilterResults(tasks, dateStr) {
+    const container = document.getElementById('task-list');
+    const emptyState = document.getElementById('empty-state');
+
+    if (tasks.length === 0) {
+      container.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    container.innerHTML = '';
+
+    const section = {
+      key: 'date',
+      title: Utils.formatRelativeDate(dateStr) || Utils.formatDate(dateStr),
+      icon: '📅',
+      className: 'section-today'
+    };
+
+    const sectionElement = this.createSectionElement(section, tasks);
+    container.appendChild(sectionElement);
+  },
+
+  // Create section element
+  createSectionElement(section, tasks) {
+    const sectionEl = document.createElement('div');
+    sectionEl.className = `task-section ${section.className}`;
+
+    sectionEl.innerHTML = `
+      <div class="task-section-header">
+        <div class="task-section-title">
+          <span>${section.icon}</span>
+          <span>${section.title}</span>
+          <span class="task-section-count">${tasks.length}</span>
+        </div>
+        <svg class="task-section-toggle" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+        </svg>
+      </div>
+      <div class="task-section-content"></div>
+    `;
+
+    // Toggle section collapse
+    const header = sectionEl.querySelector('.task-section-header');
+    header.addEventListener('click', () => {
+      sectionEl.classList.toggle('collapsed');
+    });
+
+    // Render tasks
+    const content = sectionEl.querySelector('.task-section-content');
+    tasks.forEach(task => {
+      const taskCard = this.createTaskCard(task);
+      content.appendChild(taskCard);
+    });
+
+    return sectionEl;
+  },
+
+  // Create task card element
+  createTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = `task-card ${task.completed ? 'completed' : ''}`;
+    card.dataset.taskId = task.id;
+
+    // Check if in selection mode
+    if (TaskManager.isSelectionMode()) {
+      card.classList.add('selectable');
+      if (TaskManager.isTaskSelected(task.id)) {
+        card.classList.add('selected');
+      }
+    }
+
+    // Check if overdue
+    if (!task.completed && Utils.isOverdue(task.dueDate)) {
+      card.classList.add('overdue');
+    }
+
+    // Set priority color
+    card.style.setProperty('--priority-color', Utils.getPriorityColor(task.priority));
+
+    // Build due date HTML
+    let dueDateHtml = '';
+    if (task.dueDate) {
+      const relativeDate = Utils.formatRelativeDate(task.dueDate);
+      let dateClass = '';
+      if (Utils.isOverdue(task.dueDate) && !task.completed) dateClass = 'overdue';
+      if (Utils.isToday(task.dueDate)) dateClass = 'today';
+
+      dueDateHtml = `
+        <span class="task-due-date ${dateClass}">
+          <svg viewBox="0 0 24 24" width="12" height="12">
+            <path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+          </svg>
+          ${relativeDate}
+        </span>
+      `;
+    }
+
+    // Build priority HTML
+    const priorityHtml = `
+      <span class="task-priority ${task.priority}">
+        ${Utils.getPriorityLabel(task.priority)}
+      </span>
+    `;
+
+    // Build category HTML
+    let categoryHtml = '';
+    if (task.category) {
+      categoryHtml = `<span class="task-category">${Utils.escapeHtml(task.category)}</span>`;
+    }
+
+    // Build subtask progress HTML
+    let subtaskHtml = '';
+    const progress = TaskManager.getSubtaskProgress(task);
+    if (progress) {
+      subtaskHtml = `
+        <div class="subtask-progress">
+          <span class="subtask-progress-text">${progress.completed}/${progress.total}</span>
+          <div class="subtask-progress-bar">
+            <div class="subtask-progress-fill" style="width: ${progress.percentage}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Build reminder indicator
+    let reminderHtml = '';
+    if (task.reminder?.enabled) {
+      reminderHtml = '<span class="task-reminder-indicator" title="已设置提醒">🔔</span>';
+    }
+
+    // Build tags HTML
+    const tagsHtml = Tags.renderTagBadges(task.tags);
+
+    // Build repeat badge HTML
+    const repeatHtml = Recurring.renderRepeatBadge(task.repeat);
+
+    // Build time tracking HTML
+    const timeHtml = TimeTracking.renderTimeStats(task);
+    const timerBtn = TimeTracking.renderTimerButton(task.id);
+
+    card.innerHTML = `
+      <div class="task-checkbox ${task.completed ? 'checked' : ''}"></div>
+      <div class="task-content">
+        <div class="task-title">
+          ${Utils.escapeHtml(task.title)}
+          ${reminderHtml}
+          ${repeatHtml}
+        </div>
+        ${task.description ? `<div class="task-description">${Utils.escapeHtml(task.description)}</div>` : ''}
+        ${subtaskHtml}
+        ${tagsHtml ? `<div class="task-tags">${tagsHtml}</div>` : ''}
+        <div class="task-meta">
+          ${dueDateHtml}
+          ${priorityHtml}
+          ${categoryHtml}
+          ${timeHtml}
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="task-action timer" title="${TimeTracking.isTimerRunning(task.id) ? '停止计时' : '开始计时'}" data-task-id="${task.id}">
+          ${TimeTracking.isTimerRunning(task.id) ? '⏸️' : '⏱️'}
+        </button>
+        <button class="task-action duplicate" title="复制">
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+          </svg>
+        </button>
+        <button class="task-action edit" title="编辑">
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        </button>
+        <button class="task-action delete" title="删除">
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    return card;
+  },
+
+  // Update active tab
+  updateActiveTab() {
+    document.querySelectorAll('.filter-tabs .tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === this.currentFilter);
+    });
+  },
+
+  // Show toast notification
+  showToast(message, showUndo = false) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    const toastAction = document.getElementById('toast-action');
+
+    if (!toast || !toastMessage) return;
+
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    if (this._toastHideTimer) clearTimeout(this._toastHideTimer);
+
+    toastMessage.textContent = message;
+
+    if (showUndo) {
+      toastAction.classList.remove('hidden');
+      toastAction.onclick = async () => {
+        const restored = await TaskManager.undoDelete();
+        if (restored) {
+          this.showToast('任务已恢复');
+          this.render();
+        }
+      };
+    } else {
+      toastAction.classList.add('hidden');
+    }
+
+    toast.classList.remove('hidden');
+    toast.classList.add('show');
+
+    // Auto hide after 3 seconds (matches undo timeout)
+    this._toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+      this._toastHideTimer = setTimeout(() => toast.classList.add('hidden'), 300);
+    }, 3000);
+  },
+
+  // Get current view
+  getCurrentView() {
+    return this.currentView;
+  }
+};

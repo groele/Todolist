@@ -1,0 +1,173 @@
+/* Kanban View Styles */
+
+#kanban-view.view.active,
+.kanban-view {
+  display: flex;
+  gap: var(--space-md);
+  height: 100%;
+  overflow-x: auto;
+  padding-bottom: var(--space-md);
+}
+
+.kanban-column {
+  flex: 1;
+  min-width: 250px;
+  max-width: 350px;
+  background-color: var(--bg);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  border-bottom: 2px solid var(--border);
+}
+
+.kanban-column-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.kanban-column-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-xs);
+  background-color: var(--border);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.kanban-column.todo .kanban-column-header {
+  border-bottom-color: var(--primary);
+}
+
+.kanban-column.todo .kanban-column-title {
+  color: var(--primary);
+}
+
+.kanban-column.overdue .kanban-column-header {
+  border-bottom-color: var(--danger);
+}
+
+.kanban-column.overdue .kanban-column-title {
+  color: var(--danger);
+}
+
+.kanban-column.in-progress .kanban-column-header {
+  border-bottom-color: var(--warning);
+}
+
+.kanban-column.in-progress .kanban-column-title {
+  color: var(--warning);
+}
+
+.kanban-column.done .kanban-column-header {
+  border-bottom-color: var(--success);
+}
+
+.kanban-column.done .kanban-column-title {
+  color: var(--success);
+}
+
+.kanban-column-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 100px;
+}
+
+.kanban-column-content.drag-over {
+  background-color: var(--primary-bg);
+  border-radius: var(--radius-md);
+}
+
+/* Kanban Task Card */
+.kanban-task {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.kanban-task:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kanban-task.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.kanban-task-title {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  margin-bottom: var(--space-xs);
+  word-break: break-word;
+}
+
+.kanban-task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.kanban-task-priority {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.kanban-task-priority.high {
+  background-color: var(--danger);
+}
+
+.kanban-task-priority.medium {
+  background-color: var(--warning);
+}
+
+.kanban-task-priority.low {
+  background-color: var(--success);
+}
+
+.kanban-task-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.kanban-task-date.overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Kanban Empty State */
+.kanban-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+}
