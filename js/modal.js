@@ -75,6 +75,15 @@ const Modal = {
       const clearBtn = document.getElementById('btn-clear-due-time');
       const strip = document.getElementById('time-selection-strip');
 
+      // Highlight matching active time pill
+      document.querySelectorAll('.time-presets-toolbar .time-pill').forEach(pill => {
+        if (timeVal && pill.dataset.time === timeVal) {
+          pill.classList.add('active');
+        } else {
+          pill.classList.remove('active');
+        }
+      });
+
       if (timeVal) {
         if (timeInput) timeInput.value = timeVal;
         const [h, m] = timeVal.split(':');
