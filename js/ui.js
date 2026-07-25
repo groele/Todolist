@@ -109,8 +109,14 @@ const UI = {
     });
 
     // Filter select
-    document.getElementById('filter-select').addEventListener('change', (e) => {
+    document.getElementById('filter-select')?.addEventListener('change', (e) => {
       this.currentPriorityFilter = e.target.value;
+      this.render();
+    });
+
+    // Category select
+    document.getElementById('category-select')?.addEventListener('change', (e) => {
+      this.currentCategoryFilter = e.target.value;
       this.render();
     });
 
@@ -328,6 +334,29 @@ const UI = {
     }
   },
 
+  // Trigger task completion sparkle particles
+  triggerSparkles(el) {
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'sparkle-particle';
+      const angle = (i / count) * 360;
+      const distance = 18 + Math.random() * 14;
+      const tx = Math.cos(angle * Math.PI / 180) * distance;
+      const ty = Math.sin(angle * Math.PI / 180) * distance;
+
+      particle.style.setProperty('--tx', `${tx}px`);
+      particle.style.setProperty('--ty', `${ty}px`);
+      particle.style.left = `${rect.left + rect.width / 2}px`;
+      particle.style.top = `${rect.top + rect.height / 2}px`;
+
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 600);
+    }
+  },
+
   // Handle toggle complete
   async handleToggleComplete(taskId, taskCard) {
     const checkbox = taskCard.querySelector('.task-checkbox');
@@ -338,11 +367,13 @@ const UI = {
 
     const task = await TaskManager.toggleComplete(taskId);
 
-    // Check for recurring task - auto create next instance
-    if (task && task.completed && task.repeat) {
-      const newTask = await Recurring.createNextTask(task);
-      if (newTask) {
-        this.showToast(`已创建下一个重复任务`);
+    if (task && task.completed) {
+      this.triggerSparkles(checkbox);
+      if (task.repeat) {
+        const newTask = await Recurring.createNextTask(task);
+        if (newTask) {
+          this.showToast(`已创建下一个重复任务`);
+        }
       }
     }
 
@@ -523,6 +554,7 @@ const UI = {
     const filters = {
       search: this.currentSearch,
       priority: this.currentPriorityFilter,
+      category: this.currentCategoryFilter && this.currentCategoryFilter !== 'all' ? this.currentCategoryFilter : null,
       sortOrder: this.currentSortOrder || 'dueDate'
     };
 
