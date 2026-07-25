@@ -294,6 +294,16 @@ const UI = {
       return;
     }
 
+    // Inline subtask delete button click
+    const deleteSubtaskBtn = e.target.closest('.btn-card-delete-subtask');
+    if (deleteSubtaskBtn) {
+      e.stopPropagation();
+      const subtaskId = deleteSubtaskBtn.dataset.subtaskId;
+      await TaskManager.deleteSubtask(taskId, subtaskId);
+      this.render();
+      return;
+    }
+
     // Checkbox click
     if (e.target.closest('.task-checkbox')) {
       e.stopPropagation();
@@ -1080,6 +1090,7 @@ const UI = {
       <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
         <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
         <span class="card-subtask-text">${this.highlightText(st.title)}</span>
+        <button type="button" class="btn-card-delete-subtask" data-subtask-id="${st.id}" title="删除子任务">×</button>
       </div>
     `).join('') : '';
 

@@ -554,11 +554,40 @@
   gap: 6px;
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  position: relative;
+}
+
+.card-subtask-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-subtask-item.completed .card-subtask-text {
   text-decoration: line-through;
   color: var(--text-muted);
+}
+
+.btn-card-delete-subtask {
+  opacity: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.card-subtask-item:hover .btn-card-delete-subtask {
+  opacity: 1;
+}
+
+.btn-card-delete-subtask:hover {
+  color: var(--danger);
 }
 
 .card-subtask-checkbox {
