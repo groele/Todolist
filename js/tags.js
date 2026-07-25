@@ -77,6 +77,24 @@ const Tags = {
     return this.getAllTags().find(t => t.id === tagId);
   },
 
+  // Render custom tags management list
+  renderCustomTagsManager() {
+    if (!this.customTags || this.customTags.length === 0) {
+      return '<div style="font-size: var(--font-size-xs); color: var(--text-muted);">暂无自定义标签</div>';
+    }
+
+    return `
+      <div class="custom-tags-manager" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+        ${this.customTags.map(tag => `
+          <span class="custom-tag-manage-item" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-full); font-size: 12px; background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
+            <span>${tag.icon} ${Utils.escapeHtml(tag.name)}</span>
+            <button type="button" class="btn-delete-custom-tag" data-tag-id="${tag.id}" style="border:none; background:none; cursor:pointer; color:inherit; font-weight:bold; padding:0 2px;">×</button>
+          </span>
+        `).join('')}
+      </div>
+    `;
+  },
+
   // Render tag selector
   renderTagSelector(selectedTags = []) {
     const allTags = this.getAllTags();

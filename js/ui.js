@@ -652,10 +652,34 @@ const UI = {
     `;
   },
 
+  // Render custom tags list in settings modal
+  renderCustomTagsInSettings() {
+    const container = document.getElementById('settings-tags-container');
+    if (!container || typeof Tags === 'undefined') return;
+
+    container.innerHTML = Tags.renderCustomTagsManager();
+
+    // Attach delete handlers
+    container.querySelectorAll('.btn-delete-custom-tag').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const tagId = btn.dataset.tagId;
+        if (tagId) {
+          await Tags.deleteCustomTag(tagId);
+          this.renderCustomTagsInSettings();
+          this.showToast('已删除自定义标签');
+          this.render();
+        }
+      });
+    });
+  },
+
   // Open settings modal
   openSettings() {
     const dialog = document.getElementById('settings-modal');
     if (!dialog) return;
+
+    this.renderCustomTagsInSettings();
 
     // Wire up buttons (only once)
     if (!dialog._wired) {
@@ -876,6 +900,18 @@ const UI = {
     return sectionEl;
   },
 
+  // Highlight matching search query text
+  highlightText(text) {
+    if (!text) return '';
+    const query = (this.currentSearch || '').trim();
+    const escapedText = Utils.escapeHtml(text);
+    if (!query) return escapedText;
+
+    const escapedQuery = Utils.escapeHtml(query);
+    const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escapedText.replace(regex, '<mark class="search-highlight">$1</mark>');
+  },
+
   // Create task card element
   createTaskCard(task) {
     const card = document.createElement('div');
@@ -926,7 +962,7 @@ const UI = {
     // Build category HTML
     let categoryHtml = '';
     if (task.category) {
-      categoryHtml = `<span class="task-category">${Utils.escapeHtml(task.category)}</span>`;
+      categoryHtml = `<span class="task-category">${this.highlightText(task.category)}</span>`;
     }
 
     // Build subtask progress and inline items HTML
@@ -936,7 +972,7 @@ const UI = {
       const subtaskItems = task.subtasks.map(st => `
         <div class="card-subtask-item ${st.completed ? 'completed' : ''}">
           <div class="card-subtask-checkbox ${st.completed ? 'checked' : ''}" data-subtask-id="${st.id}"></div>
-          <span class="card-subtask-text">${Utils.escapeHtml(st.title)}</span>
+          <span class="card-subtask-text">${this.highlightText(st.title)}</span>
         </div>
       `).join('');
 
@@ -973,11 +1009,11 @@ const UI = {
       <div class="task-checkbox ${task.completed ? 'checked' : ''}"></div>
       <div class="task-content">
         <div class="task-title">
-          ${Utils.escapeHtml(task.title)}
+          ${this.highlightText(task.title)}
           ${reminderHtml}
           ${repeatHtml}
         </div>
-        ${task.description ? `<div class="task-description">${Utils.escapeHtml(task.description)}</div>` : ''}
+        ${task.description ? `<div class="task-description">${this.highlightText(task.description)}</div>` : ''}
         ${subtaskHtml}
         ${tagsHtml ? `<div class="task-tags">${tagsHtml}</div>` : ''}
         <div class="task-meta">

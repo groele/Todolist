@@ -89,6 +89,13 @@ button:disabled {
   cursor: not-allowed;
 }
 
+mark.search-highlight {
+  background-color: rgba(234, 179, 8, 0.35);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
 /* Inputs */
 input, textarea, select {
   font-family: inherit;
