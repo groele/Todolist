@@ -547,9 +547,42 @@ const UI = {
     el.title = `今日任务完成率: ${percentage}%`;
   },
 
+  // Update dynamic category filter select options
+  updateCategorySelect() {
+    const select = document.getElementById('category-select');
+    if (!select) return;
+
+    const defaultCategories = ['工作', '个人', '学习', '生活', '健康'];
+    const taskCategories = TaskManager.getTasks()
+      .map(t => t.category)
+      .filter(Boolean)
+      .map(c => c.trim());
+
+    const allCategories = Array.from(new Set([...defaultCategories, ...taskCategories]));
+    const currentValue = this.currentCategoryFilter || 'all';
+
+    const icons = {
+      '工作': '💼',
+      '个人': '👤',
+      '学习': '📚',
+      '生活': '🏠',
+      '健康': '💪'
+    };
+
+    select.innerHTML = `
+      <option value="all" ${currentValue === 'all' ? 'selected' : ''}>全部分类</option>
+      ${allCategories.map(cat => `
+        <option value="${Utils.escapeHtml(cat)}" ${currentValue === cat ? 'selected' : ''}>
+          ${icons[cat] || '🏷️'} ${Utils.escapeHtml(cat)}
+        </option>
+      `).join('')}
+    `;
+  },
+
   // Render the task list
   render() {
     this.updateHeaderProgress();
+    this.updateCategorySelect();
 
     const filters = {
       search: this.currentSearch,
