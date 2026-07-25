@@ -65,17 +65,55 @@ const Modal = {
       });
     });
 
+    // Smart Time Picker UI Update Helper
+    this.updateTimePickerUI = (timeVal) => {
+      const timeInput = document.getElementById('task-due-time');
+      const hourSelect = document.getElementById('task-due-hour');
+      const minuteSelect = document.getElementById('task-due-minute');
+      const triggerBtn = document.getElementById('btn-toggle-time-picker');
+      const triggerText = document.getElementById('time-trigger-text');
+      const clearBtn = document.getElementById('btn-clear-due-time');
+      const strip = document.getElementById('time-selection-strip');
+
+      if (timeVal) {
+        if (timeInput) timeInput.value = timeVal;
+        const [h, m] = timeVal.split(':');
+        if (hourSelect) hourSelect.value = h;
+        if (minuteSelect) minuteSelect.value = m || '00';
+        if (triggerText) triggerText.textContent = `具体时间: ${timeVal}`;
+        if (triggerBtn) triggerBtn.classList.add('active');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+        if (strip) strip.classList.remove('hidden');
+      } else {
+        if (timeInput) timeInput.value = '';
+        if (hourSelect) hourSelect.value = '';
+        if (minuteSelect) minuteSelect.value = '00';
+        if (triggerText) triggerText.textContent = '设置具体时间 (可选)';
+        if (triggerBtn) triggerBtn.classList.remove('active');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        if (strip) strip.classList.add('hidden');
+      }
+    };
+
+    // Toggle time picker button
+    document.getElementById('btn-toggle-time-picker')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const strip = document.getElementById('time-selection-strip');
+      if (strip) {
+        strip.classList.toggle('hidden');
+      }
+    });
+
     // Custom time selectors change
     const hourSelect = document.getElementById('task-due-hour');
     const minuteSelect = document.getElementById('task-due-minute');
-    const timeInput = document.getElementById('task-due-time');
 
     const syncTimeFromDropdowns = () => {
-      if (hourSelect && minuteSelect && timeInput) {
+      if (hourSelect && minuteSelect) {
         if (hourSelect.value) {
-          timeInput.value = `${hourSelect.value}:${minuteSelect.value || '00'}`;
+          this.updateTimePickerUI(`${hourSelect.value}:${minuteSelect.value || '00'}`);
         } else {
-          timeInput.value = '';
+          this.updateTimePickerUI('');
         }
       }
     };
@@ -88,11 +126,8 @@ const Modal = {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const timeVal = btn.dataset.time;
-        if (timeInput && timeVal) {
-          timeInput.value = timeVal;
-          const [h, m] = timeVal.split(':');
-          if (hourSelect) hourSelect.value = h;
-          if (minuteSelect) minuteSelect.value = m || '00';
+        if (timeVal) {
+          this.updateTimePickerUI(timeVal);
         }
       });
     });
@@ -105,9 +140,7 @@ const Modal = {
     });
     document.getElementById('btn-clear-due-time')?.addEventListener('click', (e) => {
       e.preventDefault();
-      if (timeInput) timeInput.value = '';
-      if (hourSelect) hourSelect.value = '';
-      if (minuteSelect) minuteSelect.value = '00';
+      this.updateTimePickerUI('');
     });
 
     // Close on backdrop click
@@ -176,21 +209,12 @@ const Modal = {
     // Reset form
     this.form.reset();
 
-    const hourSelect = document.getElementById('task-due-hour');
-    const minuteSelect = document.getElementById('task-due-minute');
-    if (hourSelect) hourSelect.value = '';
-    if (minuteSelect) minuteSelect.value = '00';
+    this.updateTimePickerUI(prefill?.dueTime || '');
 
     // Apply prefill if provided
     if (prefill) {
       if (prefill.title) document.getElementById('task-title').value = prefill.title;
       if (prefill.dueDate) document.getElementById('task-due-date').value = prefill.dueDate;
-      if (prefill.dueTime) {
-        document.getElementById('task-due-time').value = prefill.dueTime;
-        const [h, m] = prefill.dueTime.split(':');
-        if (hourSelect) hourSelect.value = h;
-        if (minuteSelect) minuteSelect.value = m || '00';
-      }
       if (prefill.priority) {
         const radio = this.form.querySelector(`input[name="priority"][value="${prefill.priority}"]`);
         if (radio) radio.checked = true;
@@ -240,19 +264,9 @@ const Modal = {
     document.getElementById('task-title').value = task.title;
     document.getElementById('task-description').value = task.description || '';
     document.getElementById('task-due-date').value = task.dueDate || '';
-    document.getElementById('task-due-time').value = task.dueTime || '';
     document.getElementById('task-category').value = task.category || '';
 
-    const hourSelect = document.getElementById('task-due-hour');
-    const minuteSelect = document.getElementById('task-due-minute');
-    if (task.dueTime) {
-      const [h, m] = task.dueTime.split(':');
-      if (hourSelect) hourSelect.value = h;
-      if (minuteSelect) minuteSelect.value = m || '00';
-    } else {
-      if (hourSelect) hourSelect.value = '';
-      if (minuteSelect) minuteSelect.value = '00';
-    }
+    this.updateTimePickerUI(task.dueTime || '');
 
     // Set priority radio
     const radio = this.form.querySelector(`input[name="priority"][value="${task.priority}"]`);

@@ -913,6 +913,53 @@
   flex-wrap: wrap;
 }
 
+.time-trigger-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.time-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.time-trigger-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: var(--primary-bg);
+}
+
+.time-trigger-btn.active {
+  border-style: solid;
+  border-color: var(--primary);
+  background-color: var(--primary-bg);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.time-selection-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  animation: fadeIn 0.2s ease;
+}
+
+.time-selection-strip.hidden {
+  display: none !important;
+}
+
 .time-custom-row {
   display: flex;
   align-items: center;
