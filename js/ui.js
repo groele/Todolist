@@ -497,8 +497,29 @@ const UI = {
     }
   },
 
+  // Update header progress widget
+  updateHeaderProgress() {
+    const el = document.getElementById('header-progress-widget');
+    if (!el) return;
+
+    const todayTasks = TaskManager.getFilteredTasks({ status: 'today' });
+    const todayTotal = todayTasks.length;
+    const todayCompleted = todayTasks.filter(t => t.completed).length;
+    const percentage = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
+
+    el.innerHTML = `
+      <div class="header-progress-text">今日 ${todayCompleted}/${todayTotal} (${percentage}%)</div>
+      <div class="header-progress-bar">
+        <div class="header-progress-fill" style="width: ${percentage}%"></div>
+      </div>
+    `;
+    el.title = `今日任务完成率: ${percentage}%`;
+  },
+
   // Render the task list
   render() {
+    this.updateHeaderProgress();
+
     const filters = {
       search: this.currentSearch,
       priority: this.currentPriorityFilter,
